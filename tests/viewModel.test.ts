@@ -51,4 +51,35 @@ describe('ExpoSketchViewModel', () => {
     vm.resizeSelected(0, 0);
     expect(vm.state.document.elements[0].width).toBe(before);
   });
+
+  it('reads and writes rotated dimensions through the on-canvas footprint', () => {
+    const vm = new ExpoSketchViewModel(fakeRepository());
+    vm.selectElement('booth-1');
+    vm.rotateSelected();
+    // 香氛展位 5 × 3.5 旋转后，属性面板与图上读数都是横向 3.5、纵向 5
+    const rotated = vm.state.selectedElement;
+    expect(rotated?.displayWidth).toBe(3.5);
+    expect(rotated?.displayHeight).toBe(5);
+    // 把图上横向宽度改成 4（占地口径），映射回自身深度 4，位置不变
+    const xBefore = vm.state.document.elements.find((element) => element.id === 'booth-1')?.x;
+    vm.resizeSelected(4, rotated!.displayHeight);
+    const stored = vm.state.document.elements.find((element) => element.id === 'booth-1');
+    expect(stored?.width).toBe(5);
+    expect(stored?.height).toBe(4);
+    expect(stored?.x).toBe(xBefore);
+    expect(vm.state.selectedElement?.displayWidth).toBe(4);
+  });
+
+  it('keeps a rotated element centered on the same spot after rotating', () => {
+    const vm = new ExpoSketchViewModel(fakeRepository());
+    vm.selectElement('booth-1');
+    const centerBefore = (() => {
+      const el = vm.state.document.elements.find((element) => element.id === 'booth-1')!;
+      return { x: el.x + el.width / 2, y: el.y + el.height / 2 };
+    })();
+    vm.rotateSelected();
+    const after = vm.state.selectedElement!;
+    expect(after.x + after.displayWidth / 2).toBeCloseTo(centerBefore.x, 6);
+    expect(after.y + after.displayHeight / 2).toBeCloseTo(centerBefore.y, 6);
+  });
 });

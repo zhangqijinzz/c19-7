@@ -1,4 +1,4 @@
-import { createElement, createStarterDocument, analyzeLayout, findElement, getBoundingBox, normalizeRotation } from './domain';
+import { createElement, createStarterDocument, analyzeLayout, findElement, getBoundingBox, normalizeRotation, rotateElementQuarterTurn } from './domain';
 import type { LayoutRepository } from './repository';
 import type { Analysis, ElementKind, LayoutDocument, LayoutMode, Notice, RenderElement, ViewPhase } from './types';
 
@@ -78,17 +78,25 @@ export class ExpoSketchViewModel {
     this.commitAndPersist({ document: { ...this.stateValue.document, elements } });
   }
 
-  resizeSelected(width: number, height: number) {
+  // 入参为画布上横向/纵向的占地尺寸，按旋转方向映射回元素自身的宽/深；
+  // 未旋转时映射为恒等，行为与之前完全一致。
+  resizeSelected(footprintWidth: number, footprintHeight: number) {
     const id = this.stateValue.selectedId;
-    if (!id || width <= 0 || height <= 0) return;
-    const elements = this.stateValue.document.elements.map((element) => element.id === id ? { ...element, width: Number(width.toFixed(1)), height: Number(height.toFixed(1)) } : element);
+    if (!id || footprintWidth <= 0 || footprintHeight <= 0) return;
+    const elements = this.stateValue.document.elements.map((element) => {
+      if (element.id !== id) return element;
+      const isQuarterTurn = normalizeRotation(element.rotation) % 180 !== 0;
+      const width = isQuarterTurn ? footprintHeight : footprintWidth;
+      const height = isQuarterTurn ? footprintWidth : footprintHeight;
+      return { ...element, width: Number(width.toFixed(1)), height: Number(height.toFixed(1)) };
+    });
     this.commitAndPersist({ document: { ...this.stateValue.document, elements } });
   }
 
   rotateSelected() {
     const id = this.stateValue.selectedId;
     if (!id) return;
-    const elements = this.stateValue.document.elements.map((element) => element.id === id ? { ...element, rotation: normalizeRotation(element.rotation + 90) } : element);
+    const elements = this.stateValue.document.elements.map((element) => element.id === id ? rotateElementQuarterTurn(element) : element);
     this.commitAndPersist({ document: { ...this.stateValue.document, elements }, notice: { tone: 'info', message: '方向已旋转 90°' } });
   }
 

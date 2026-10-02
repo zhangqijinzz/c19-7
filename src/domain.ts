@@ -57,6 +57,49 @@ export const getBoundingBox = (element: ExpoElement) => {
   return { left: element.x, top: element.y, right: element.x + width, bottom: element.y + height, width, height };
 };
 
+export interface RenderPlacement {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  rotation: number;
+}
+
+/**
+ * 元素自身（未旋转）盒子在画布上的位置与尺寸。
+ * 盒子绕自身中心旋转后，其可视的轴对齐包围盒与 getBoundingBox 完全一致，
+ * 即检查（越界/重叠/通道）、属性面板读数、画布显示共用同一套占地口径。
+ */
+export const getRenderPlacement = (element: ExpoElement): RenderPlacement => {
+  const box = getBoundingBox(element);
+  return {
+    left: Number((box.left + (box.width - element.width) / 2).toFixed(2)),
+    top: Number((box.top + (box.height - element.height) / 2).toFixed(2)),
+    width: element.width,
+    height: element.height,
+    rotation: normalizeRotation(element.rotation),
+  };
+};
+
+/**
+ * 绕元素自身中心顺时针旋转 90°。旋转前后可视占地盒的中心保持不变，
+ * 元素不会在画布上跳位；同时把 x/y 更新为新占地盒左上角，
+ * 使存储位置始终与检查口径一致。
+ */
+export const rotateElementQuarterTurn = (element: ExpoElement): ExpoElement => {
+  const rotation = normalizeRotation(element.rotation + 90);
+  const before = getBoundingBox(element);
+  const centerX = before.left + before.width / 2;
+  const centerY = before.top + before.height / 2;
+  const after = getBoundingBox({ ...element, rotation });
+  return {
+    ...element,
+    rotation,
+    x: Number((centerX - after.width / 2).toFixed(2)),
+    y: Number((centerY - after.height / 2).toFixed(2)),
+  };
+};
+
 const intersectionSize = (aStart: number, aEnd: number, bStart: number, bEnd: number) =>
   Math.max(0, Math.min(aEnd, bEnd) - Math.max(aStart, bStart));
 
