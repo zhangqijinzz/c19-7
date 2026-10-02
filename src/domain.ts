@@ -50,11 +50,15 @@ export const createElement = (kind: ElementKind, index: number, field: FieldSize
 
 export const normalizeRotation = (rotation: number): number => ((Math.round(rotation / 90) * 90) % 360 + 360) % 360;
 
+// 占用框口径与画布一致：旋转绕元素中心进行（同 CSS transform 的默认行为），
+// x/y 始终是未旋转框的左上角，旋转后的占用范围以同一中心向外展开。
 export const getBoundingBox = (element: ExpoElement) => {
   const isQuarterTurn = normalizeRotation(element.rotation) % 180 !== 0;
   const width = isQuarterTurn ? element.height : element.width;
   const height = isQuarterTurn ? element.width : element.height;
-  return { left: element.x, top: element.y, right: element.x + width, bottom: element.y + height, width, height };
+  const centerX = element.x + element.width / 2;
+  const centerY = element.y + element.height / 2;
+  return { left: centerX - width / 2, top: centerY - height / 2, right: centerX + width / 2, bottom: centerY + height / 2, width, height };
 };
 
 const intersectionSize = (aStart: number, aEnd: number, bStart: number, bEnd: number) =>

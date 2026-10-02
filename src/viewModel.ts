@@ -78,10 +78,21 @@ export class ExpoSketchViewModel {
     this.commitAndPersist({ document: { ...this.stateValue.document, elements } });
   }
 
+  // width/height 为图上实际占用的尺寸（与画布、属性面板同一口径）；
+  // 转回存储宽高，并重新锚定 x/y，让占用框的左上角保持不动，避免改尺寸时元素跳位。
   resizeSelected(width: number, height: number) {
     const id = this.stateValue.selectedId;
     if (!id || width <= 0 || height <= 0) return;
-    const elements = this.stateValue.document.elements.map((element) => element.id === id ? { ...element, width: Number(width.toFixed(1)), height: Number(height.toFixed(1)) } : element);
+    const elements = this.stateValue.document.elements.map((element) => {
+      if (element.id !== id) return element;
+      const isQuarterTurn = normalizeRotation(element.rotation) % 180 !== 0;
+      const rawWidth = isQuarterTurn ? height : width;
+      const rawHeight = isQuarterTurn ? width : height;
+      const box = getBoundingBox(element);
+      const centerX = box.left + width / 2;
+      const centerY = box.top + height / 2;
+      return { ...element, x: Number((centerX - rawWidth / 2).toFixed(2)), y: Number((centerY - rawHeight / 2).toFixed(2)), width: Number(rawWidth.toFixed(1)), height: Number(rawHeight.toFixed(1)) };
+    });
     this.commitAndPersist({ document: { ...this.stateValue.document, elements } });
   }
 
